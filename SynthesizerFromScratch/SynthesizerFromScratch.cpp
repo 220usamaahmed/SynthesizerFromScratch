@@ -89,6 +89,9 @@ enum class oscType
 
 double dOctaveBaseFrequency = 110.0;
 double d12thRootOf2 = pow(2.0, 1.0 / 12);
+double minorThird = pow(2.0, 3.0 / 12);
+double majorThird = pow(2.0, 4.0 / 12);
+double perfectFifth = pow(2.0, 7.0 / 12);
 sEnvelopeADSR envelope;
 
 double w(double dHertz)
@@ -115,7 +118,7 @@ double sampleSawAnalogueWave(double dHertz, double dTime)
 {
     double dOutput = 0.0;
 
-    for (double n = 1.0; n < 10; ++n)
+    for (double n = 1.0; n < 4; ++n)
         dOutput += (sin(n * w(dHertz) * dTime)) / n;
     
     return dOutput * (2.0 / PI);
@@ -146,9 +149,26 @@ double osc(double dHertz, double dTime, oscType type)
     }
 }
 
-double makeNoise(double dTime)
+double playMajorChord(double dTime)
 {
-    return envelope.GetAmplitude(dTime) * osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE) * 0.4;
+    return envelope.GetAmplitude(dTime) *
+        (
+            // Major chord
+            +osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE)
+            + osc(dFrequencyOutput * majorThird, dTime, oscType::SAW_ANALOGUE)
+            + osc(dFrequencyOutput * perfectFifth, dTime, oscType::SAW_ANALOGUE)
+            ) * 0.4;
+}
+
+double playMinorChord(double dTime)
+{
+    return envelope.GetAmplitude(dTime) *
+        (
+            // Major chord
+            +osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE)
+            + osc(dFrequencyOutput * minorThird, dTime, oscType::SAW_ANALOGUE)
+            + osc(dFrequencyOutput * perfectFifth, dTime, oscType::SAW_ANALOGUE)
+            ) * 0.4;
 }
 
 int main()
@@ -161,7 +181,8 @@ int main()
     olcNoiseMaker<short> sound(devices[0], 44100, 1, 8, 512);
 
     // Link noise function with sound machine
-    sound.SetUserFunction(makeNoise);
+    // sound.SetUserFunction(playMajorChord);
+    sound.SetUserFunction(playMinorChord);
 
     int nCurrentKey = -1;
     bool bKeyPressed = false;
