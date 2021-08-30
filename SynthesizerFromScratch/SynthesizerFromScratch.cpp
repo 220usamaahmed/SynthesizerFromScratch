@@ -1,6 +1,81 @@
 #include <iostream>
 #include "olcNoiseMaker.h";
 
+struct sEnvelopeADSR
+{
+    double dAttackTime;
+    double dDecayTime;
+    double dReleaseTime;
+
+    double dSustainAmplitude;
+    double dStartAmplitude;
+
+    double dTriggerOnTime;
+    double dTriggerOffTime;
+
+    bool bNoteOn;
+
+    sEnvelopeADSR()
+    {
+        dAttackTime = 0.1;
+        dDecayTime = 0.01;
+        dStartAmplitude = 1.0;
+        dSustainAmplitude = 0.8;
+        dReleaseTime = 0.2;
+        dTriggerOnTime = 0.0;
+        dTriggerOffTime = 0.0;
+        bNoteOn = false;
+    }
+
+    void NoteOn(double dTimeOn)
+    {
+        dTriggerOnTime = dTimeOn;
+        bNoteOn = true;
+    }
+
+    void NoteOff(double dTimeOff)
+    {
+        dTriggerOffTime = dTimeOff;
+        bNoteOn = false;
+    }
+
+    double GetAmplitude(double dTime)
+    {
+        double dAmplitude = 0.0;
+
+        double dLifeTime = dTime - dTriggerOnTime;
+
+        if (bNoteOn)
+        {
+            // ADS handled here
+            
+            // Attach
+            if (dLifeTime <= dAttackTime)
+                dAmplitude = (dLifeTime / dAttackTime) * dStartAmplitude;
+
+            // Decay
+            if (dLifeTime > dAttackTime && dLifeTime <= (dAttackTime + dDecayTime))
+                dAmplitude = ((dLifeTime - dAttackTime) / dDecayTime)
+                    * (dSustainAmplitude - dStartAmplitude) 
+                    + dStartAmplitude;
+
+            // Sustain
+            if (dLifeTime > (dAttackTime + dDecayTime))
+                dAmplitude = dSustainAmplitude;
+        }
+        else
+        {
+            // R handled here
+            dAmplitude = ((dTime - dTriggerOffTime) / dReleaseTime) * (0.0 - dSustainAmplitude) + dSustainAmplitude;
+        }
+
+        if (dAmplitude <= 0.0001)
+            dAmplitude = 0.0;
+
+        return dAmplitude;
+    }
+};
+
 atomic<double> dFrequencyOutput = 0.0;
 
 enum class oscType
@@ -11,6 +86,10 @@ enum class oscType
     SAW_ANALOGUE,
     SAW
 };
+
+double dOctaveBaseFrequency = 110.0;
+double d12thRootOf2 = pow(2.0, 1.0 / 12);
+sEnvelopeADSR envelope;
 
 double w(double dHertz)
 {
@@ -69,7 +148,7 @@ double osc(double dHertz, double dTime, oscType type)
 
 double makeNoise(double dTime)
 {
-    return osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE) * 0.4;
+    return envelope.GetAmplitude(dTime) * osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE) * 0.4;
 }
 
 int main()
@@ -84,24 +163,33 @@ int main()
     // Link noise function with sound machine
     sound.SetUserFunction(makeNoise);
 
-    double dOctaveBaseFrequency = 110.0;
-    double d12thRootOf2 = pow(2.0, 1.0 / 12);
+    int nCurrentKey = -1;
+    bool bKeyPressed = false;
 
     while (1)
     {
-        bool bKeyPressed = false;
-        for (int k = 0; k < 15; k++)
+        bKeyPressed = false;
+        for (int k = 0; k < 16; k++)
         {
-            if (GetAsyncKeyState((unsigned char)("ZSXCFVGBNJMK\xbcL\xbc"[k])) & 0x8000)
+            if (GetAsyncKeyState((unsigned char)("ZSXCFVGBNJMK\xbcL\xbe\xbf "[k])) & 0x8000)
             {
-                dFrequencyOutput = dOctaveBaseFrequency * pow(d12thRootOf2, k);
+                if (nCurrentKey != k)
+                {
+                    dFrequencyOutput = dOctaveBaseFrequency * pow(d12thRootOf2, k);
+                    envelope.NoteOn(sound.GetTime());
+                    nCurrentKey = k;
+                }
                 bKeyPressed = true;
             }
         }
 
         if (!bKeyPressed)
         {
-            dFrequencyOutput = 0.0;
+            if (nCurrentKey != -1)
+            {
+                envelope.NoteOff(sound.GetTime());
+                nCurrentKey = -1;
+            }
         }
     }
 
