@@ -1,19 +1,75 @@
 #include <iostream>
 #include "olcNoiseMaker.h";
 
-#define PI 3.14159
-
 atomic<double> dFrequencyOutput = 0.0;
 
-double makeSinWave(double dtime)
+enum class oscType
 {
-    return 0.5 * sin(dFrequencyOutput * 2 * PI * dtime);
+    SIN,
+    SQUARE,
+    TRIANGLE,
+    SAW_ANALOGUE,
+    SAW
+};
+
+double w(double dHertz)
+{
+    return dHertz * 2 * PI;
 }
 
-double makeSquareWave(double dtime)
+double sampleSinWave(double dHertz, double dTime)
 {
-    if (sin(dFrequencyOutput * 2 * PI * dtime) > 0) return 0.1;
-    else return -0.1;
+    return 0.5 * sin(w(dHertz) * dTime);
+}
+
+double sampleSquareWave(double dHertz, double dTime)
+{
+    return (sin(w(dHertz) * dTime) > 0) ? 0.1 : -0.1;
+}
+
+double sampleTriangleWave(double dHertz, double dTime)
+{
+    return asin(sin(w(dHertz) * dTime) * 2.0 / PI);
+}
+
+double sampleSawAnalogueWave(double dHertz, double dTime)
+{
+    double dOutput = 0.0;
+
+    for (double n = 1.0; n < 10; ++n)
+        dOutput += (sin(n * w(dHertz) * dTime)) / n;
+    
+    return dOutput * (2.0 / PI);
+}
+
+double sampleSawWave(double dHertz, double dTime)
+{
+    return (2.0 / PI) * (dHertz * PI * fmod(dTime, 1.0 / dHertz) - (PI / 2.0));
+}
+
+
+double osc(double dHertz, double dTime, oscType type)
+{
+    switch (type)
+    {
+    case oscType::SIN:
+        return sampleSinWave(dHertz, dTime);
+    case oscType::SQUARE:
+        return sampleSquareWave(dHertz, dTime);
+    case oscType::TRIANGLE:
+        return sampleTriangleWave(dHertz, dTime);
+    case oscType::SAW_ANALOGUE:
+        return sampleSawAnalogueWave(dHertz, dTime);
+    case oscType::SAW:
+        return sampleSawWave(dHertz, dTime);
+    default:
+        return 0.0;
+    }
+}
+
+double makeNoise(double dTime)
+{
+    return osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE) * 0.4;
 }
 
 int main()
@@ -26,7 +82,7 @@ int main()
     olcNoiseMaker<short> sound(devices[0], 44100, 1, 8, 512);
 
     // Link noise function with sound machine
-    sound.SetUserFunction(makeSquareWave);
+    sound.SetUserFunction(makeNoise);
 
     double dOctaveBaseFrequency = 110.0;
     double d12thRootOf2 = pow(2.0, 1.0 / 12);
