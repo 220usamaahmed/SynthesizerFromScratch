@@ -84,7 +84,8 @@ enum class oscType
     SQUARE,
     TRIANGLE,
     SAW_ANALOGUE,
-    SAW
+    SAW,
+    NOISE
 };
 
 double dOctaveBaseFrequency = 110.0;
@@ -101,17 +102,17 @@ double w(double dHertz)
 
 double sampleSinWave(double dHertz, double dTime)
 {
-    return 0.5 * sin(w(dHertz) * dTime);
+    return 0.5 * sin(dHertz);
 }
 
 double sampleSquareWave(double dHertz, double dTime)
 {
-    return (sin(w(dHertz) * dTime) > 0) ? 0.1 : -0.1;
+    return (sin(dHertz) > 0) ? 0.1 : -0.1;
 }
 
 double sampleTriangleWave(double dHertz, double dTime)
 {
-    return asin(sin(w(dHertz) * dTime) * 2.0 / PI);
+    return asin(sin(dHertz) * 2.0 / PI);
 }
 
 double sampleSawAnalogueWave(double dHertz, double dTime)
@@ -119,7 +120,7 @@ double sampleSawAnalogueWave(double dHertz, double dTime)
     double dOutput = 0.0;
 
     for (double n = 1.0; n < 4; ++n)
-        dOutput += (sin(n * w(dHertz) * dTime)) / n;
+        dOutput += (sin(n * dHertz)) / n;
     
     return dOutput * (2.0 / PI);
 }
@@ -129,21 +130,29 @@ double sampleSawWave(double dHertz, double dTime)
     return (2.0 / PI) * (dHertz * PI * fmod(dTime, 1.0 / dHertz) - (PI / 2.0));
 }
 
-
-double osc(double dHertz, double dTime, oscType type)
+double sampleNoise()
 {
+    return 2.0 * ((double)rand() / (double)RAND_MAX) - 1.0;
+}
+
+double osc(double dHertz, double dTime, oscType type, double dLFOHertz = 0.0, double dLFOAmplitude = 0.0)
+{
+    double dFreq = w(dHertz) * dTime + dLFOAmplitude * dHertz * sin(w(dLFOHertz) * dTime);
+
     switch (type)
     {
     case oscType::SIN:
-        return sampleSinWave(dHertz, dTime);
+        return sampleSinWave(dFreq, dTime);
     case oscType::SQUARE:
-        return sampleSquareWave(dHertz, dTime);
+        return sampleSquareWave(dFreq, dTime);
     case oscType::TRIANGLE:
-        return sampleTriangleWave(dHertz, dTime);
+        return sampleTriangleWave(dFreq, dTime);
     case oscType::SAW_ANALOGUE:
-        return sampleSawAnalogueWave(dHertz, dTime);
+        return sampleSawAnalogueWave(dFreq, dTime);
     case oscType::SAW:
         return sampleSawWave(dHertz, dTime);
+    case oscType::NOISE:
+        return sampleNoise();
     default:
         return 0.0;
     }
@@ -169,6 +178,15 @@ double playMinorChord(double dTime)
             + osc(dFrequencyOutput * minorThird, dTime, oscType::SAW_ANALOGUE)
             + osc(dFrequencyOutput * perfectFifth, dTime, oscType::SAW_ANALOGUE)
             ) * 0.4;
+}
+
+double makeNoise(double dTime)
+{
+    return envelope.GetAmplitude(dTime) *
+        (
+            // Major chord
+            +osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE, 5.0, 0.001)
+            ) * 0.2;
 }
 
 int main()
