@@ -158,12 +158,70 @@ double osc(double dHertz, double dTime, oscType type, double dLFOHertz = 0.0, do
     }
 }
 
+struct Instrument
+{
+    double dVolume;
+    sEnvelopeADSR env;
+
+    virtual double sound(double dTime, double dFrequency) = 0;
+};
+
+struct Bell : Instrument
+{
+    Bell()
+    {
+        dVolume = 0.4;
+
+        env.dAttackTime = 0.01;
+        env.dDecayTime = 1.0;
+        env.dStartAmplitude = 1.0;
+        env.dSustainAmplitude = 0.0;
+        env.dReleaseTime = 1.0;
+    }
+
+    double sound(double dTime, double dFrequency)
+    {
+        return env.GetAmplitude(dTime) *
+            (
+                + 1.0 * osc(dFrequencyOutput * 2.0, dTime, oscType::SIN, 5.0, 0.001)
+                + 0.5 * osc(dFrequencyOutput * 3.0, dTime, oscType::SIN)
+                + 0.25 * osc(dFrequencyOutput * 4.0, dTime, oscType::SIN)
+                ) * dVolume;
+    }
+};
+
+struct Harmonica : Instrument
+{
+    Harmonica()
+    {
+        dVolume = 0.4;
+
+        env.dAttackTime = 0.05;
+        env.dDecayTime = 1.0;
+        env.dStartAmplitude = 1.0;
+        env.dSustainAmplitude = 0.95;
+        env.dReleaseTime = 0.1;
+    }
+
+    double sound(double dTime, double dFrequency)
+    {
+        return env.GetAmplitude(dTime) *
+            (
+                + 1.0 * osc(dFrequencyOutput * 2.0, dTime, oscType::SQUARE, 5.0, 0.001)
+                + 0.5 * osc(dFrequencyOutput * 3.0, dTime, oscType::SQUARE)
+                + 0.25 * osc(dFrequencyOutput * 4.0, dTime, oscType::NOISE)
+                ) * dVolume;
+    }
+};
+
+Instrument* voice = nullptr;
+
 double playMajorChord(double dTime)
 {
     return envelope.GetAmplitude(dTime) *
         (
             // Major chord
-            +osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE)
+            + osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE)
             + osc(dFrequencyOutput * majorThird, dTime, oscType::SAW_ANALOGUE)
             + osc(dFrequencyOutput * perfectFifth, dTime, oscType::SAW_ANALOGUE)
             ) * 0.4;
@@ -174,7 +232,7 @@ double playMinorChord(double dTime)
     return envelope.GetAmplitude(dTime) *
         (
             // Major chord
-            +osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE)
+            + osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE)
             + osc(dFrequencyOutput * minorThird, dTime, oscType::SAW_ANALOGUE)
             + osc(dFrequencyOutput * perfectFifth, dTime, oscType::SAW_ANALOGUE)
             ) * 0.4;
@@ -182,11 +240,7 @@ double playMinorChord(double dTime)
 
 double makeNoise(double dTime)
 {
-    return envelope.GetAmplitude(dTime) *
-        (
-            // Major chord
-            +osc(dFrequencyOutput, dTime, oscType::SAW_ANALOGUE, 5.0, 0.001)
-            ) * 0.2;
+    return voice->sound(dTime, dFrequencyOutput);
 }
 
 int main()
@@ -198,9 +252,11 @@ int main()
     // Create sound machine
     olcNoiseMaker<short> sound(devices[0], 44100, 1, 8, 512);
 
+    voice = new Harmonica();
+
     // Link noise function with sound machine
     // sound.SetUserFunction(playMajorChord);
-    sound.SetUserFunction(playMinorChord);
+    sound.SetUserFunction(makeNoise);
 
     int nCurrentKey = -1;
     bool bKeyPressed = false;
@@ -215,7 +271,7 @@ int main()
                 if (nCurrentKey != k)
                 {
                     dFrequencyOutput = dOctaveBaseFrequency * pow(d12thRootOf2, k);
-                    envelope.NoteOn(sound.GetTime());
+                    voice->env.NoteOn(sound.GetTime());
                     nCurrentKey = k;
                 }
                 bKeyPressed = true;
@@ -226,7 +282,7 @@ int main()
         {
             if (nCurrentKey != -1)
             {
-                envelope.NoteOff(sound.GetTime());
+                voice->env.NoteOff(sound.GetTime());
                 nCurrentKey = -1;
             }
         }
