@@ -1,11 +1,33 @@
 #include <iostream>
-#include "Synth.h"
+#include "olcNoiseMaker.h"
+#include "Instrument.h"
+
+SynthesizerFromScratch::Instrument* instrument = new SynthesizerFromScratch::Bell();
+double dCurrentFrequency = 0.0;
+
+double userFunction(double dTime)
+{
+	return instrument->playSound(dTime, dCurrentFrequency);
+}
+
+void initSynth()
+{
+	vector<wstring> devices = olcNoiseMaker<short>::Enumerate();
+
+	for (auto d : devices)
+		std::wcout << "Found Output Device: " << d << std::endl;
+	std::wcout << "Selecting: " << devices[0] << std::endl;
+
+	olcNoiseMaker<short>* soundMachine = new olcNoiseMaker<short>(devices[0], 44100, 1, 8, 512);
+
+	soundMachine->SetUserFunction(userFunction);
+}
 
 int main()
 {
 	std::cout << "--- Synthesizer From Scratch ---" << std::endl;
 
-	SynthesizerFromScratch::Synth synth;
+	initSynth();
 
 	int nCurrentKey = -1;
 	bool bKeyPressed = false;
@@ -23,7 +45,7 @@ int main()
 				if (nCurrentKey != k)
 				{
 					dFrequencyOutput = dOctaveBaseFrequency * pow(d12thRootOf2, k);
-					// SynthesizerFromScratch::Synth::dCurrentFrequency = dFrequencyOutput;
+					dCurrentFrequency = dFrequencyOutput;
 					nCurrentKey = k;
 				}
 				bKeyPressed = true;
@@ -34,6 +56,7 @@ int main()
 		{
 			if (nCurrentKey != -1)
 			{
+				dCurrentFrequency = 0.0;
 				nCurrentKey = -1;
 			}
 		}

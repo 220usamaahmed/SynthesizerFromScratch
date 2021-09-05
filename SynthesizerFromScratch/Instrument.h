@@ -5,12 +5,12 @@ namespace SynthesizerFromScratch
 	class Instrument
 	{
 	public:
-		virtual double playSound(double dTime, double dFrequency) = 0;
+		virtual double playSound(double dTime, double dFrequency);
 		
 		double dVolume;
 	};
 
-	class Bell : Instrument
+	class Bell : public Instrument
 	{
 	public:
 		Bell();
@@ -18,11 +18,11 @@ namespace SynthesizerFromScratch
 		double playSound(double dTime, double dFrequency) override;
 	};
 
-	class Harmonica
+	class Harmonica : public Instrument
 	{
 	public:
 		Harmonica();
 
-		static double playSound(double dTime, double dFrequency);
+		double playSound(double dTime, double dFrequency) override;
 	};
 }

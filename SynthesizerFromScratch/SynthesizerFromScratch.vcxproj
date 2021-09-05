@@ -142,14 +142,12 @@
   <ItemGroup>
     <ClCompile Include="Instrument.cpp" />
     <ClCompile Include="Oscillator.cpp" />
-    <ClCompile Include="Synth.cpp" />
     <ClCompile Include="SynthesizerFromScratch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Instrument.h" />
     <ClInclude Include="olcNoiseMaker.h" />
     <ClInclude Include="Oscillator.h" />
-    <ClInclude Include="Synth.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

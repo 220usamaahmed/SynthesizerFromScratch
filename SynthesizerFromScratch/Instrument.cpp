@@ -3,6 +3,11 @@
 
 using namespace SynthesizerFromScratch;
 
+double Instrument::playSound(double dTime, double dFrequency)
+{
+	return 0.0;
+}
+
 Bell::Bell()
 {
 	dVolume = 0.4;
