@@ -1,7 +1,7 @@
 #include "Oscillator.h"
 #include <cmath>
 
-double SynthesizerFromScratch::Oscillator::getValue(oscType type, double dFrequency, double dTime, double dLFOFrequency, double dLFOAmplitude)
+double Oscillator::getValue(oscType type, double dFrequency, double dTime, double dLFOFrequency, double dLFOAmplitude)
 {
     double dFreqencyWithLFO = frequencyToW(dFrequency) * dTime + dLFOAmplitude * dFrequency * sin(frequencyToW(dLFOFrequency) * dTime);
 
@@ -24,27 +24,27 @@ double SynthesizerFromScratch::Oscillator::getValue(oscType type, double dFreque
     }
 }
 
-double SynthesizerFromScratch::Oscillator::frequencyToW(double dFrequency)
+double Oscillator::frequencyToW(double dFrequency)
 {
     return dFrequency * 2 * 3.14159;
 }
 
-double SynthesizerFromScratch::Oscillator::sampleSinWave(double dFrequency, double dTime)
+double Oscillator::sampleSinWave(double dFrequency, double dTime)
 {
     return 0.5 * sin(dFrequency);
 }
 
-double SynthesizerFromScratch::Oscillator::sampleSquareWave(double dFrequency, double dTime)
+double Oscillator::sampleSquareWave(double dFrequency, double dTime)
 {
     return (sin(dFrequency) > 0) ? 0.1 : -0.1;
 }
 
-double SynthesizerFromScratch::Oscillator::sampleTriangleWave(double dFrequency, double dTime)
+double Oscillator::sampleTriangleWave(double dFrequency, double dTime)
 {
     return asin(sin(dFrequency) * 2.0 / 3.14159);
 }
 
-double SynthesizerFromScratch::Oscillator::sampleSawAnalogueWave(double dFrequency, double dTime)
+double Oscillator::sampleSawAnalogueWave(double dFrequency, double dTime)
 {
     double dOutput = 0.0;
 
@@ -54,12 +54,12 @@ double SynthesizerFromScratch::Oscillator::sampleSawAnalogueWave(double dFrequen
     return dOutput * (2.0 / 3.14159);
 }
 
-double SynthesizerFromScratch::Oscillator::sampleSawWave(double dFrequency, double dTime)
+double Oscillator::sampleSawWave(double dFrequency, double dTime)
 {
     return (2.0 / 3.14159) * (dFrequency * 3.14159 * fmod(dTime, 1.0 / dFrequency) - (3.14159 / 2.0));
 }
 
-double SynthesizerFromScratch::Oscillator::sampleNoise()
+double Oscillator::sampleNoise()
 {
     return 2.0 * ((double)rand() / (double)RAND_MAX) - 1.0;
 }
